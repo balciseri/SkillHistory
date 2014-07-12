@@ -1,0 +1,16 @@
+## Interface: 50400
+## Title: SkillHistory
+## Notes: Create a skill history attached to the blizzard's raid frames. Actually only for player,party1 and party2
+## Version: 1.00
+## Author: Mavvo
+## DefaultState: Enabled
+## SavedVariables: SkillHistoryDb
+# Inspired by the CastHistory module in ArenaLive [UnitFrames] by Vadrak
+
+
+#@no-lib-strip@
+libs\LibSharedMedia-3.0\lib.xml
+#@end-no-lib-strip@
+
+SkillHistory.lua
+SkillHistory.xml
