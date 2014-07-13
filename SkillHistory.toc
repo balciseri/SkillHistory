@@ -1,7 +1,7 @@
 ## Interface: 50400
 ## Title: SkillHistory
 ## Notes: Create a skill history attached to the blizzard's raid frames. Actually only for player,party1 and party2
-## Version: 1.03
+## Version: 1.04
 ## Author: Mavvo
 ## DefaultState: Enabled
 ## SavedVariables: SkillHistoryDB
