@@ -4,6 +4,24 @@ local skillHistoryFramePlayer
 local skillHistoryFrameParty1
 local skillHistoryFrameParty2
 
+local position = {
+	["EDGE_BOTTOM"] = {"TOP","BOTTOM"},
+	["EDGE_TOP"] = {"BOTTOM","TOP"},
+	["EDGE_LEFT"] = {"RIGHT","LEFT"},
+	["EDGE_RIGHT"] = {"LEFT","RIGHT"},
+	["EDGE_TOP_RIGHT"] = {"TOPLEFT","TOPRIGHT"},
+	["EDGE_TOP_LEFT"] = {"TOPRIGHT","TOPLEFT"},
+	["EDGE_BOTTOM_RIGHT"] = {"BOTTOMLEFT","BOTTOMRIGHT"},
+	["EDGE_BOTTOM_LEFT"] = {"BOTTOMRIGHT","BOTTOMLEFT"},
+	["CORNER_BOTTOM_RIGHT"] = {"TOPLEFT","BOTTOMRIGHT"},
+	["CORNER_BOTTOM_LEFT"] = {"TOPRIGHT","BOTTOMLEFT"},
+	["CORNER_TOP_RIGHT"] = {"BOTTOMLEFT","TOPRIGHT"},
+	["CORNER_TOP_LEFT"] = {"BOTTOMRIGHT","TOPLEFT"},
+	["UNDER_BOTTOM_RIGHT"] = {"TOPRIGHT","BOTTOMRIGHT"},
+	["UNDER_BOTTOM_LEFT"] = {"TOPLEFT","BOTTOMLEFT"},
+	["ABOVE_TOP_RIGHT"] = {"BOTTOMRIGHT","TOPRIGHT"},
+	["ABOVE_TOP_LEFT"] = {"BOTTOMLEFT","TOPLEFT"},
+}
 function SkillHistory:OnInitialize()
 	local defaults = {
 		profile = {
@@ -13,9 +31,9 @@ function SkillHistory:OnInitialize()
 			yOffset = 1,
 			iconDuration = 4,
 			iconDirection = "RIGHT",
+			iconPosition = "EDGE_BOTTOM_RIGHT",
 		},
 	}
-
  	self.db = LibStub("AceDB-3.0"):New("SkillHistoryDB", defaults, "Default")
 	self.db.RegisterCallback(self, "OnProfileChanged", "RefreshConfig")
 	self.db.RegisterCallback(self, "OnProfileCopied", "RefreshConfig")
@@ -99,6 +117,14 @@ function SkillHistory:OnInitialize()
 				desc = "The direction of the slide",
 				set = "SetOptionIconDirection",
 				get = "GetOptionIconDirection",
+			},
+			iconPosition = {
+				type = "select",
+				values = {["EDGE_TOP_RIGHT"]="Edge, Top-right",["EDGE_TOP_LEFT"]="Edge, Top-left", ["EDGE_BOTTOM_RIGHT"]="Edge, Bottom-right",["EDGE_BOTTOM_LEFT"]="Edge, Bottom-left",["CORNER_BOTTOM_RIGHT"]="Corner, Bottom-right",["CORNER_BOTTOM_LEFT"]="Corner, Bottom-left",["CORNER_TOP_RIGHT"]="Corner, Top-right",["CORNER_TOP_LEFT"]="Corner, Top-left",["EDGE_RIGHT"]="Edge, Right",["EDGE_LEFT"]="Edge, Left",["EDGE_TOP"]="Edge, Top",["EDGE_BOTTOM"]="Edge, Bottom",["UNDER_BOTTOM_RIGHT"]="Under, Bottom-right",["UNDER_BOTTOM_LEFT"]="Under, Bottom-left",["ABOVE_TOP_RIGHT"]="Above, Top-right",["ABOVE_TOP_LEFT"]="Above, Top-left" },
+				name = "Position",
+				desc = "The anchor point relative to the blizzard's raid frame",
+				set = "SetOptionIconPosition",
+				get = "GetOptionIconPosition",
 			},
 		},
 	}
@@ -188,9 +214,21 @@ end
 function SkillHistory:SetOptionIconDirection(info, newValue)
     self.db.profile.iconDirection = newValue
 end
+function SkillHistory:GetOptionIconPosition(info)
+    return self.db.profile.iconPosition
+end
+function SkillHistory:SetOptionIconPosition(info, newValue)
+    self.db.profile.iconPosition = newValue
+	skillHistoryFramePlayer:ClearAllPoints();
+	skillHistoryFrameParty1:ClearAllPoints();
+	skillHistoryFrameParty2:ClearAllPoints();
+	self:OnRosterUpdate()
+end
+
 function SkillHistory:GetDB()
 	return self.db
 end
+
 
 local testega = 0
 local ICON_SIZE = 35
@@ -893,11 +931,11 @@ function SkillHistory:OnRosterUpdate()
 			for i = 1,40 do 
 				local f = _G["CompactRaidFrame"..i]
 				if(f and f.displayedUnit and UnitIsUnit("player", f.displayedUnit)) then
-					skillHistoryFramePlayer:SetPoint("BOTTOMLEFT", f, "BOTTOMRIGHT",1,3)
+					skillHistoryFramePlayer:SetPoint(position[SkillHistory:GetDB().profile.iconPosition][1], f, position[SkillHistory:GetDB().profile.iconPosition][2],1,3)
 				elseif(f and f.displayedUnit and UnitIsUnit("party1", f.displayedUnit)) then
-					skillHistoryFrameParty1:SetPoint("BOTTOMLEFT", f, "BOTTOMRIGHT",1,3)
+					skillHistoryFrameParty1:SetPoint(position[SkillHistory:GetDB().profile.iconPosition][1], f, position[SkillHistory:GetDB().profile.iconPosition][2],1,3)
 				elseif(f and f.displayedUnit and UnitIsUnit("party2", f.displayedUnit)) then
-					skillHistoryFrameParty2:SetPoint("BOTTOMLEFT", f, "BOTTOMRIGHT",1,3)
+					skillHistoryFrameParty2:SetPoint(position[SkillHistory:GetDB().profile.iconPosition][1], f, position[SkillHistory:GetDB().profile.iconPosition][2],1,3)
 				end
 			end
 		elseif CompactRaidFrameManager.container.groupMode == "discrete" then
@@ -906,11 +944,11 @@ function SkillHistory:OnRosterUpdate()
 				for i = 1,5 do
 					local f = _G["CompactPartyFrameMember"..i]
 					if (f and f.displayedUnit and UnitIsUnit("player", f.displayedUnit)) then
-						skillHistoryFramePlayer:SetPoint("BOTTOMLEFT", f, "BOTTOMRIGHT",1,3)
+						skillHistoryFramePlayer:SetPoint(position[SkillHistory:GetDB().profile.iconPosition][1], f, position[SkillHistory:GetDB().profile.iconPosition][2],1,3)
 					elseif(f and f.displayedUnit and UnitIsUnit("party1", f.displayedUnit)) then
-						skillHistoryFrameParty1:SetPoint("BOTTOMLEFT", f, "BOTTOMRIGHT",1,3)
+						skillHistoryFrameParty1:SetPoint(position[SkillHistory:GetDB().profile.iconPosition][1], f, position[SkillHistory:GetDB().profile.iconPosition][2],1,3)
 					elseif(f and f.displayedUnit and UnitIsUnit("party2", f.displayedUnit)) then
-						skillHistoryFrameParty2:SetPoint("BOTTOMLEFT", f, "BOTTOMRIGHT",1,3)
+						skillHistoryFrameParty2:SetPoint(position[SkillHistory:GetDB().profile.iconPosition][1], f, position[SkillHistory:GetDB().profile.iconPosition][2],1,3)
 					end
 				end
 			else 
@@ -918,11 +956,11 @@ function SkillHistory:OnRosterUpdate()
 					for j = 1,5 do
 						local f = _G["CompactRaidGroup"..i.."Member"..j]
 						if (f and f.displayedUnit and UnitIsUnit("player", f.displayedUnit)) then
-							skillHistoryFramePlayer:SetPoint("BOTTOMLEFT", f, "BOTTOMRIGHT",1,3)
+							skillHistoryFramePlayer:SetPoint(position[SkillHistory:GetDB().profile.iconPosition][1], f, position[SkillHistory:GetDB().profile.iconPosition][2],1,3)
 						elseif(f and f.displayedUnit and UnitIsUnit("party1", f.displayedUnit)) then
-							skillHistoryFrameParty1:SetPoint("BOTTOMLEFT", f, "BOTTOMRIGHT",1,3)
+							skillHistoryFrameParty1:SetPoint(position[SkillHistory:GetDB().profile.iconPosition][1], f, position[SkillHistory:GetDB().profile.iconPosition][2],1,3)
 						elseif(f and f.displayedUnit and UnitIsUnit("party2", f.displayedUnit)) then
-							skillHistoryFrameParty2:SetPoint("BOTTOMLEFT", f, "BOTTOMRIGHT",1,3)
+							skillHistoryFrameParty2:SetPoint(position[SkillHistory:GetDB().profile.iconPosition][1], f, position[SkillHistory:GetDB().profile.iconPosition][2],1,3)
 						end
 					end
 				end
