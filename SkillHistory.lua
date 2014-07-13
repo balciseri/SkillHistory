@@ -1,13 +1,199 @@
-SkillHistory = {}
-SkillHistory.frame = CreateFrame("Frame")
+SkillHistory = LibStub("AceAddon-3.0"):NewAddon("SkillHistory", "AceConsole-3.0",  "AceEvent-3.0")
+
+local skillHistoryFramePlayer
+local skillHistoryFrameParty1
+local skillHistoryFrameParty2
+
+function SkillHistory:OnInitialize()
+	local defaults = {
+		profile = {
+			scale = 1.3,
+			maxIcons = 3,
+			xOffset = 1,
+			yOffset = 1,
+			iconDuration = 4,
+			iconDirection = "RIGHT",
+		},
+	}
+
+ 	self.db = LibStub("AceDB-3.0"):New("SkillHistoryDB", defaults, "Default")
+	self.db.RegisterCallback(self, "OnProfileChanged", "RefreshConfig")
+	self.db.RegisterCallback(self, "OnProfileCopied", "RefreshConfig")
+	self.db.RegisterCallback(self, "OnProfileReset", "RefreshConfig")
+	
+	local options = {
+		name = "Skill History",
+		handler = SkillHistory,
+		type = "group",
+		childGroups = "tab",
+		args = {
+			scale = {
+				type = "range",
+				name = "Scale",
+				min	= 0.1,
+				max = 10,
+				softMin = 0.1,
+				softMax = 10,
+				desc = "The scale for the icons",
+				step = 0.1,
+				bigStep = 0.1,
+				set = "SetOptionScale",
+				get = "GetOptionScale",
+			},
+			maxIcons = {
+				type = "range",
+				name = "Max icons",
+				min	= 1,
+				max = 30,
+				softMin = 1,
+				softMax = 30,
+				desc = "The number of icons per frame",
+				step = 1,
+				bigStep = 1,
+				set = "SetOptionMaxIcon",
+				get = "GetOptionMaxIcon",
+			},
+			xOffset = {
+				type = "range",
+				name = "X offset",
+				min	= 0,
+				max = 100,
+				softMin = 0,
+				softMax = 100,
+				desc = "The horizontal offset between the icons",
+				step = 1,
+				bigStep = 1,
+				set = "SetOptionXOffset",
+				get = "GetOptionXOffset",
+			},
+			yOffset = {
+				type = "range",
+				name = "Y offset",
+				min	= 0,
+				max = 100,
+				softMin = 0,
+				softMax = 100,
+				desc = "The vertical offset between the icons",
+				step = 1,
+				bigStep = 1,
+				set = "SetOptionYOffset",
+				get = "GetOptionYOffset",
+			},
+			iconDuration = {
+				type = "range",
+				name = "Icon duration (s)",
+				min	= 0,
+				max = 20,
+				softMin = 0,
+				softMax = 20,
+				desc = "The icon duration in seconds",
+				step = 0.5,
+				bigStep = 0.5,
+				set = "SetOptionIconDuration",
+				get = "GetOptionIconDuration",
+			},
+			iconDirection = {
+				type = "select",
+				values = {["RIGHT"]="Right",["LEFT"]="Left",["UP"]="Up",["DOWN"]="Down",},
+				name = "Direction",
+				desc = "The direction of the slide",
+				set = "SetOptionIconDirection",
+				get = "GetOptionIconDirection",
+			},
+		},
+	}
+	
+	LibStub("AceConfig-3.0"):RegisterOptionsTable("SkillHistoryOptions", options)
+	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("SkillHistoryOptions", "Skill History")
+	
+	LibStub("AceConfig-3.0"):RegisterOptionsTable("SkillHistoryProfile", LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db))
+	LibStub("AceConfigDialog-3.0"):AddToBlizOptions("SkillHistoryProfile", "Profiles", "Skill History")
+		
+    self:RegisterChatCommand("sh", "ChatCommandSh")
+		
+	SkillHistory:CreateBar()
+	
+	ChatFrame1:AddMessage("SkillHistory loaded. Type /sh to open the options panel.",2,0,0)
+		
+	-- Set basic values for the skillHistory.
+	SkillHistory:SetBasicSkillHistoryFrameValues(skillHistoryFramePlayer,"player")
+	SkillHistory:SetBasicSkillHistoryFrameValues(skillHistoryFrameParty1,"party1")
+	SkillHistory:SetBasicSkillHistoryFrameValues(skillHistoryFrameParty2,"party2")
+	
+	CompactRaidFrameContainer:HookScript("OnEvent", SkillHistory.OnRosterUpdate)
+	CompactRaidFrameContainer:HookScript("OnHide", SkillHistory.OnRosterHide)
+	CompactRaidFrameContainer:HookScript("OnShow", SkillHistory.OnRosterUpdate)
+	
+end
+function SkillHistory:OnEnable()
+	self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+	self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+	self:RegisterEvent("UNIT_SPELLCAST_START")
+	self:RegisterEvent("UNIT_SPELLCAST_STOP")
+	self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
+	self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
+	self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
+end
+
+function SkillHistory:RefreshConfig()
+	SkillHistory:UpdateBar()
+	skillHistoryFramePlayer:Reset()
+	skillHistoryFrameParty1:Reset()
+	skillHistoryFrameParty2:Reset()
+	self:Print("Settings refreshed")
+end
+function SkillHistory:ChatCommandSh(input)
+	if not input or input:trim() == "" then
+        InterfaceOptionsFrame_OpenToCategory(self.optionsFrame)
+		InterfaceOptionsFrame_OpenToCategory(self.optionsFrame)
+    else
+        LibStub("AceConfigCmd-3.0"):HandleCommand("sh", "SkillHistory", input)
+    end
+end
+
+function SkillHistory:GetOptionScale(info)
+    return self.db.profile.scale
+end
+function SkillHistory:SetOptionScale(info, newValue)
+    self.db.profile.scale = newValue
+	SkillHistory:UpdateBar()
+end
+function SkillHistory:GetOptionMaxIcon(info)
+    return self.db.profile.maxIcons
+end
+function SkillHistory:SetOptionMaxIcon(info, newValue)
+    self.db.profile.maxIcons = newValue
+end
+function SkillHistory:GetOptionXOffset(info)
+    return self.db.profile.xOffset
+end
+function SkillHistory:SetOptionXOffset(info, newValue)
+    self.db.profile.xOffset = newValue
+end
+function SkillHistory:GetOptionYOffset(info)
+    return self.db.profile.yOffset
+end
+function SkillHistory:SetOptionYOffset(info, newValue)
+    self.db.profile.yOffset = newValue
+end
+function SkillHistory:GetOptionIconDuration(info)
+    return self.db.profile.iconDuration
+end
+function SkillHistory:SetOptionIconDuration(info, newValue)
+    self.db.profile.iconDuration = newValue
+end
+function SkillHistory:GetOptionIconDirection(info)
+    return self.db.profile.iconDirection
+end
+function SkillHistory:SetOptionIconDirection(info, newValue)
+    self.db.profile.iconDirection = newValue
+end
+function SkillHistory:GetDB()
+	return self.db
+end
 
 local testega = 0
-local MAXICONS 
 local ICON_SIZE = 35
-local DEFAULT_X_MOD 
-local DEFAULT_Y_MOD 
-local ICON_DURATION 
-local ICON_DIRECTION
 
 -- *** FRAME FUNCTIONS ***
 local function Enable (self)
@@ -65,7 +251,7 @@ local function Rotate (self, event, spellID, lineID)
 	local icon
 	local unit = self.unit
 	local dontMove = true
-	local direction = ICON_DIRECTION
+	local direction = SkillHistory:GetDB().profile.iconDirection
 	local size = ICON_SIZE
 
 	-- This is the first spell the cast history gets. We need to create an icon now.
@@ -158,7 +344,7 @@ local function Rotate (self, event, spellID, lineID)
 					icon.moveAnimation:Play()
 				end
 				
-				if (not icon.fading and icon.timesMoved >= MAXICONS ) then
+				if (not icon.fading and icon.timesMoved >= SkillHistory:GetDB().profile.maxIcons ) then
 					icon.fadeOutAnimation:Play()
 				end
 			
@@ -228,7 +414,7 @@ local function FadeInOnFinished(animation, requested)
 	local icon = animation:GetParent()
 	
 	icon:SetAlpha(1)
-	icon.expires = GetTime() + ICON_DURATION	
+	icon.expires = GetTime() + SkillHistory:GetDB().profile.iconDuration	
 
 end
 
@@ -249,25 +435,25 @@ local function MoveOnFinished(animation, requested)
 	local icon = animation:GetParent()
 	local skillHistory = icon:GetParent()
 	local size = ICON_SIZE
-	local direction = ICON_DIRECTION
+	local direction = SkillHistory:GetDB().profile.iconDirection
 	
 	-- Reset animation's xOffset to default
 	local point, relativeTo, relativePoint, xOffset, yOffset = icon:GetPoint()
 
 	if ( direction == "LEFT" ) then
-		xOffset = (-size - DEFAULT_X_MOD) * icon.timesMoved 
+		xOffset = (-size - SkillHistory:GetDB().profile.xOffset) * icon.timesMoved 
 		yOffset = 0
 		icon.translationAnimation:SetOffset(-size, 0)
 	elseif ( direction == "RIGHT" ) then
-		xOffset = ( size + DEFAULT_X_MOD ) * icon.timesMoved 
+		xOffset = ( size + SkillHistory:GetDB().profile.xOffset ) * icon.timesMoved 
 		yOffset = 0
 		icon.translationAnimation:SetOffset(size, 0)
 	elseif ( direction == "UP" ) then
-		yOffset = (size + DEFAULT_Y_MOD) * icon.timesMoved
+		yOffset = (size + SkillHistory:GetDB().profile.yOffset) * icon.timesMoved
 		xOffset = 0
 		icon.translationAnimation:SetOffset(0, size)
 	elseif ( direction == "DOWN" ) then
-		yOffset = (-size - DEFAULT_Y_MOD) * icon.timesMoved
+		yOffset = (-size - SkillHistory:GetDB().profile.yOffset) * icon.timesMoved
 		xOffset = 0
 		icon.translationAnimation:SetOffset(0, -size)
 	end	
@@ -293,7 +479,7 @@ end
 function SkillHistory:CreateIcon(skillHistory)
 
 	local size = ICON_SIZE
-	local direction = ICON_DIRECTION
+	local direction = self.db.profile.iconDirection
 	local numIcons = skillHistory.numIcons + 1
 	local iconTemplate = "SkillHistoryIconTemplate"
 	local prefix = skillHistory.unit.."SkillHistory"
@@ -510,6 +696,9 @@ function SkillHistory:GetAffectedSkillHistoryFrameByUnit(unit)
 	return affectedFrame
 end
 function SkillHistory:GetAffectedSkillHistoryFrameByName(name)
+	if name == nil then
+		return nil
+	end
 	local affectedFrame
 	if (skillHistoryFramePlayer and UnitIsUnit(name,"player")) then
 		affectedFrame = skillHistoryFramePlayer
@@ -524,86 +713,95 @@ function SkillHistory:GetAffectedSkillHistoryFrameByName(name)
 	return affectedFrame
 end
 
-function SkillHistory:UNIT_SPELLCAST_SUCCEEDED(...)
+function SkillHistory:UNIT_SPELLCAST_SUCCEEDED(eventName,...)
+	if select(5,...) == 146739 then return end  --we don't like double corruption
 	local unit = ...
 	local skillHistoryFrame = SkillHistory:GetAffectedSkillHistoryFrameByUnit(unit)
 	if skillHistoryFrame ~= nil then
 		SkillHistory:SuccessfulCast(skillHistoryFrame, "UNIT_SPELLCAST_SUCCEEDED", ...)
 	end
 end
-function SkillHistory:UNIT_SPELLCAST_START(...)
+function SkillHistory:UNIT_SPELLCAST_START(eventName,...)
 	local unit = ...
 	local skillHistoryFrame = SkillHistory:GetAffectedSkillHistoryFrameByUnit(unit)
 	if skillHistoryFrame ~= nil then
 		SkillHistory:StartCast(skillHistoryFrame, "UNIT_SPELLCAST_START", ...)
 	end
 end
-function SkillHistory:UNIT_SPELLCAST_STOP(...)
+function SkillHistory:UNIT_SPELLCAST_STOP(eventName,...)
 	local unit = ...
 	local skillHistoryFrame = SkillHistory:GetAffectedSkillHistoryFrameByUnit(unit)
 	if skillHistoryFrame ~= nil then
 		SkillHistory:StopCast(skillHistoryFrame, ...)
 	end
 end
-function SkillHistory:UNIT_SPELLCAST_CHANNEL_START(...)
+function SkillHistory:UNIT_SPELLCAST_CHANNEL_START(eventName,...)
 	local unit = ...
 	local skillHistoryFrame = SkillHistory:GetAffectedSkillHistoryFrameByUnit(unit)
 	if skillHistoryFrame ~= nil then
 		SkillHistory:StartChannel(skillHistoryFrame,"UNIT_SPELLCAST_CHANNEL_START",...)
 	end
 end
-function SkillHistory:UNIT_SPELLCAST_CHANNEL_STOP(...)
+function SkillHistory:UNIT_SPELLCAST_CHANNEL_STOP(eventName,...)
 	local unit = ...
 	local skillHistoryFrame = SkillHistory:GetAffectedSkillHistoryFrameByUnit(unit)
 	if skillHistoryFrame ~= nil then
 		SkillHistory:StopChannel(skillHistoryFrame, ...)
 	end
 end
-function SkillHistory:UNIT_SPELLCAST_CHANNEL_UPDATE(...)
+function SkillHistory:UNIT_SPELLCAST_CHANNEL_UPDATE(eventName,...)
 	local unit = ...
 	local skillHistoryFrame = SkillHistory:GetAffectedSkillHistoryFrameByUnit(unit)
 	if skillHistoryFrame ~= nil then
 		SkillHistory:StopChannel(skillHistoryFrame, ...)
 	end
 end
-function SkillHistory:COMBAT_LOG_EVENT_UNFILTERED_SPELL_DAMAGE(...)
+function SkillHistory:COMBAT_LOG_EVENT_UNFILTERED_SPELL_DAMAGE(eventName,...)
 	local sourceName = select(5, ...)
 	local skillHistoryFrame = SkillHistory:GetAffectedSkillHistoryFrameByName(sourceName)
 	if skillHistoryFrame ~= nil then
 		SkillHistory:SetIconBorderColour(skillHistoryFrame, ...)
 	end
 end
-function SkillHistory:COMBAT_LOG_EVENT_UNFILTERED_SPELL_HEAL(...)
+function SkillHistory:COMBAT_LOG_EVENT_UNFILTERED_SPELL_HEAL(eventName,...)
 	local sourceName = select(5, ...)
 	local skillHistoryFrame = SkillHistory:GetAffectedSkillHistoryFrameByName(sourceName)
 	if skillHistoryFrame ~= nil then
 		SkillHistory:SetIconBorderColour(skillHistoryFrame, ...)
 	end
 end
-function SkillHistory:COMBAT_LOG_EVENT_UNFILTERED_SPELL_CAST_SUCCESS(...)
+function SkillHistory:COMBAT_LOG_EVENT_UNFILTERED_SPELL_CAST_SUCCESS(eventName,...)
 	local sourceName = select(5, ...)
 	local skillHistoryFrame = SkillHistory:GetAffectedSkillHistoryFrameByName(sourceName)
 	if skillHistoryFrame ~= nil then
 		SkillHistory:SetIconBorderColour(skillHistoryFrame, ...)
 	end
 end
-function SkillHistory:COMBAT_LOG_EVENT_UNFILTERED_SPELL_INTERRUPT(...)
+function SkillHistory:COMBAT_LOG_EVENT_UNFILTERED_SPELL_INTERRUPT(eventName,...)
 	local destName = select(9, ...)
 	local skillHistoryFrame = SkillHistory:GetAffectedSkillHistoryFrameByName(destName)
 	if skillHistoryFrame ~= nil then
 		SkillHistory:LockOutCast(skillHistoryFrame, ...)
 	end
 end
-function SkillHistory:UpdateBar()
-	skillHistoryFramePlayer:SetScale(SkillHistoryDb.scale)
-	skillHistoryFrameParty1:SetScale(SkillHistoryDb.scale)
-	skillHistoryFrameParty2:SetScale(SkillHistoryDb.scale)
-	MAXICONS = SkillHistoryDb.maxIcons
-	DEFAULT_X_MOD = SkillHistoryDb.x_mod
-	DEFAULT_Y_MOD = SkillHistoryDb.y_mod
-	ICON_DURATION = SkillHistoryDb.icon_duration
-	ICON_DIRECTION = SkillHistoryDb.icon_direction
+function SkillHistory:COMBAT_LOG_EVENT_UNFILTERED(eventName,...)
+	local event2 = select(2, ...)
+	eventName = eventName.."_"..event2
 	
+	if eventName == "COMBAT_LOG_EVENT_UNFILTERED_SPELL_DAMAGE" then
+		self:COMBAT_LOG_EVENT_UNFILTERED_SPELL_DAMAGE(seventName,...)
+	elseif eventName == "COMBAT_LOG_EVENT_UNFILTERED_SPELL_HEAL" then
+		self:COMBAT_LOG_EVENT_UNFILTERED_SPELL_HEAL(seventName,...)
+	elseif eventName == "COMBAT_LOG_EVENT_UNFILTERED_SPELL_CAST_SUCCESS" then
+		self:COMBAT_LOG_EVENT_UNFILTERED_SPELL_CAST_SUCCESS(seventName,...)
+	elseif eventName == "COMBAT_LOG_EVENT_UNFILTERED_SPELL_INTERRUPT" then
+		self:COMBAT_LOG_EVENT_UNFILTERED_SPELL_INTERRUPT(seventName,...)
+	end
+end
+function SkillHistory:UpdateBar()
+	skillHistoryFramePlayer:SetScale(self.db.profile.scale)
+	skillHistoryFrameParty1:SetScale(self.db.profile.scale)
+	skillHistoryFrameParty2:SetScale(self.db.profile.scale)
 end
 function SkillHistory:CreateSkillHistoryFrame()
 	local frame
@@ -628,40 +826,6 @@ function SkillHistory:Test()
 	else	
 		testega = 0
 	end]]
-end
-
-local cmdfuncs = {
-	scale = function(v) SkillHistoryDb.scale = tonumber(v) SkillHistory:UpdateBar() end,
-	max = function(v) SkillHistoryDb.maxIcons = tonumber(v) SkillHistory:UpdateBar() end,
-	x = function(v) SkillHistoryDb.x_mod = tonumber(v) SkillHistory:UpdateBar() end,
-	y = function(v) SkillHistoryDb.y_mod = tonumber(v) SkillHistory:UpdateBar() end,
-	duration = function(v) SkillHistoryDb.icon_duration = tonumber(v) SkillHistory:UpdateBar() end,
-	direction = function(v) SkillHistoryDb.icon_direction = string.upper(v) SkillHistory:UpdateBar() end,
-	test = function() SkillHistory:Test() end,
-}
-local cmdtbl = {}
-
-function SkillHistory:SkillHistory_Command(cmd)
-	for k in ipairs(cmdtbl) do
-		cmdtbl[k] = nil
-	end
-	for v in gmatch(cmd, "[^ ]+") do
-  	tinsert(cmdtbl, v)
-  end
-  local cb = cmdfuncs[cmdtbl[1]] 
-  if cb then
-  	local s = cmdtbl[2]
-  	cb(s)
-  else
-  	ChatFrame1:AddMessage("Skill History Options | /mg <option>",2,0,0)  	
-  	ChatFrame1:AddMessage("/sh scale <number> | actual value: " .. SkillHistoryDb.scale,2,1,0)
-	ChatFrame1:AddMessage("/sh max <number> | actual value: " .. SkillHistoryDb.maxIcons,2,1,0)
-	ChatFrame1:AddMessage("/sh x <number> | actual value: " .. SkillHistoryDb.x_mod,2,1,0)
-	ChatFrame1:AddMessage("/sh y <number> | actual value: " .. SkillHistoryDb.y_mod,2,1,0)
-	ChatFrame1:AddMessage("/sh duration <number> | actual value: " .. SkillHistoryDb.icon_duration,2,1,0)
-	ChatFrame1:AddMessage("/sh direction <right,left,up,down> | actual value: " .. string.lower(SkillHistoryDb.icon_direction),2,1,0)
-	ChatFrame1:AddMessage("/sh test (execute)",2,1,0)
-  end
 end
 
 function SkillHistory:SetBasicSkillHistoryFrameValues(skillHistory,unit)
@@ -690,30 +854,7 @@ function SkillHistory:SetBasicSkillHistoryFrameValues(skillHistory,unit)
 		skillHistory:Disable()
 	end	
 end
-function SkillHistory:VARIABLES_LOADED(...)
-	SkillHistoryDb = SkillHistoryDb or { scale = 1, maxIcons = 3, x_mod = 1, y_mod = 1, icon_duration = 3, icon_direction = "RIGHT", }
-	MAXICONS = SkillHistoryDb.maxIcons
-	DEFAULT_X_MOD = SkillHistoryDb.x_mod
-	DEFAULT_Y_MOD = SkillHistoryDb.y_mod
-	ICON_DURATION = SkillHistoryDb.icon_duration
-	ICON_DIRECTION = SkillHistoryDb.icon_direction
-	SkillHistory:CreateBar()
-	
-	SlashCmdList["SkillHistory"] = function (cmd) SkillHistory:SkillHistory_Command(cmd) end
-	SLASH_SkillHistory1 = "/sh"
-	ChatFrame1:AddMessage("SkillHistory loaded. Type /sh for options.",2,0,0)
-	
-	self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-	
-	-- Set basic values for the skillHistory.
-	SkillHistory:SetBasicSkillHistoryFrameValues(skillHistoryFramePlayer,"player")
-	SkillHistory:SetBasicSkillHistoryFrameValues(skillHistoryFrameParty1,"party1")
-	SkillHistory:SetBasicSkillHistoryFrameValues(skillHistoryFrameParty2,"party2")
-	
-	CompactRaidFrameContainer:HookScript("OnEvent", SkillHistory.OnRosterUpdate)
-	CompactRaidFrameContainer:HookScript("OnHide", SkillHistory.OnRosterHide)
-	CompactRaidFrameContainer:HookScript("OnShow", SkillHistory.OnRosterUpdate)
-end
+
 function SkillHistory:OnRosterHide()
 	if CompactRaidFrameContainer:IsVisible() then
 		return 
@@ -788,19 +929,4 @@ function SkillHistory:OnRosterUpdate()
 			end
 		end
 	end
-end
-
-SkillHistory.frame:SetScript("OnEvent", function(self, event, ...)
-	if ( event == "COMBAT_LOG_EVENT_UNFILTERED" ) then
-		local event2 = select(2, ...)
-		event = event.."_"..event2
-	end
-
-	if type(SkillHistory[event]) == "function" then
-		SkillHistory[event](self, ...) -- call one of the functions above
-	end
-end)
-
-for k, v in pairs(SkillHistory) do
-	SkillHistory.frame:RegisterEvent(k) -- Register all events for which handlers have been defined
 end
