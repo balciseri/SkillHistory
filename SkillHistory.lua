@@ -1,7 +1,7 @@
 SkillHistory = LibStub("AceAddon-3.0"):NewAddon("SkillHistory", "AceConsole-3.0",  "AceEvent-3.0")
 
 local ICON_SIZE = 35
-
+local MAX_FRAMES = 5 
 local skillHistoryFrames = {}
 
 local position = {
@@ -127,7 +127,7 @@ function SkillHistory:OnInitialize()
 				desc = "The anchor point relative to the blizzard's ride frame",
 				set = function(info,val) 
 						self.db.profile.iconPosition = val
-						for i=1,5 do
+						for i=1,MAX_FRAMES do
 							skillHistoryFrames[i]:ClearAllPoints();
 						end
 						self:OnRosterUpdate() 
@@ -152,11 +152,10 @@ function SkillHistory:OnInitialize()
 	-- Set basic values for the skillHistory.
 	self:SetBasicSkillHistoryFramesValues()
 	skillHistoryFrames[1].unit = "player"
-	skillHistoryFrames[2].unit = "party1"
-	skillHistoryFrames[3].unit = "party2"
-	skillHistoryFrames[4].unit = "party3"
-	skillHistoryFrames[5].unit = "party4"
-		
+	for u=2,5 do
+		skillHistoryFrames[u].unit = "party"..(u-1)
+	end
+
 	CompactRaidFrameContainer:HookScript("OnEvent", SkillHistory.OnRosterUpdate)
 	CompactRaidFrameContainer:HookScript("OnHide", SkillHistory.OnRosterHide)
 	CompactRaidFrameContainer:HookScript("OnShow", SkillHistory.OnRosterUpdate)
@@ -174,7 +173,7 @@ end
 
 function SkillHistory:RefreshConfig()
 	SkillHistory:UpdateBar()
-	for i=1,5 do
+	for i=1,MAX_FRAMES do
 		skillHistoryFrames[i]:Reset()
 	end
 	
@@ -674,7 +673,7 @@ end
 function SkillHistory:GetAffectedSkillHistoryFrameByUnit(unit)
 	local affectedFrame
 	
-	for i=1,5 do
+	for i=1,MAX_FRAMES do
 		if (skillHistoryFrames[i] and skillHistoryFrames[i].unit == unit) then
 			affectedFrame = skillHistoryFrames[i]
 			break
@@ -691,7 +690,7 @@ function SkillHistory:GetAffectedSkillHistoryFrameByName(name)
 	end
 	local affectedFrame
 	
-	for i=1,5 do
+	for i=1,MAX_FRAMES do
 		if (skillHistoryFrames[i] and UnitIsUnit(name,skillHistoryFrames[i].unit)) then
 			affectedFrame = skillHistoryFrames[i]
 			break
@@ -790,7 +789,7 @@ function SkillHistory:COMBAT_LOG_EVENT_UNFILTERED(eventName,...)
 end
 
 function SkillHistory:UpdateBar()
-	for i = 1,5 do
+	for i = 1,MAX_FRAMES do
 		skillHistoryFrames[i]:SetScale(self.db.profile.scale)
 	end
 end
@@ -805,7 +804,7 @@ function SkillHistory:CreateSkillHistoryFrame()
 end
 
 function SkillHistory:CreateBar()
-	for i = 1,5 do
+	for i = 1,MAX_FRAMES do
 		skillHistoryFrames[i] = SkillHistory:CreateSkillHistoryFrame()
 	end
 
@@ -838,7 +837,7 @@ function SkillHistory:SetBasicSkillHistoryFrameValues(skillHistory)
 	end	
 end
 function SkillHistory:SetBasicSkillHistoryFramesValues()
-	for i=1,5 do
+	for i=1,MAX_FRAMES do
 		self:SetBasicSkillHistoryFrameValues(skillHistoryFrames[i])
 	end
 end
@@ -848,13 +847,13 @@ function SkillHistory:OnRosterHide()
 		return 
 	end
 	
-	for i=1,5 do
+	for i=1,MAX_FRAMES do
 		skillHistoryFrames[i]:Disable()
 	end
 end
 function SkillHistory:OnRosterUpdate()
 	if not CompactRaidFrameContainer:IsVisible() then
-		for i=1,5 do
+		for i=1,MAX_FRAMES do
 			if(skillHistoryFrames[i].enabled) then
 				skillHistoryFrames[i]:Disable()
 			end
@@ -862,7 +861,7 @@ function SkillHistory:OnRosterUpdate()
 		return 
 	end
 	
-	for i=1,5 do
+	for i=1,MAX_FRAMES do
 		if( not skillHistoryFrames[i].enabled) then
 			skillHistoryFrames[i]:Enable()
 		end
@@ -873,9 +872,10 @@ function SkillHistory:OnRosterUpdate()
 		if CompactRaidFrameManager.container.groupMode == "flush" then
 			for i = 1,40 do 
 				local f = _G["CompactRaidFrame"..i]
-				
-				if(f and f.displayedUnit and UnitIsUnit(skillHistoryFrames[i].unit, f.displayedUnit)) then
-					skillHistoryFrames[i]:SetPoint(position[SkillHistory:GetDB().profile.iconPosition][1], f, position[SkillHistory:GetDB().profile.iconPosition][2],1,3)
+				for u= 1,MAX_FRAMES do
+					if(f and f.displayedUnit and UnitIsUnit(skillHistoryFrames[u].unit, f.displayedUnit)) then
+						skillHistoryFrames[u]:SetPoint(position[SkillHistory:GetDB().profile.iconPosition][1], f, position[SkillHistory:GetDB().profile.iconPosition][2],1,3)
+					end
 				end
 			end
 		elseif CompactRaidFrameManager.container.groupMode == "discrete" then
@@ -883,9 +883,10 @@ function SkillHistory:OnRosterUpdate()
 			if ( test ) then
 				for i = 1,5 do
 					local f = _G["CompactPartyFrameMember"..i]
-					
-					if(f and f.displayedUnit and UnitIsUnit(skillHistoryFrames[i].unit, f.displayedUnit)) then
-						skillHistoryFrames[i]:SetPoint(position[SkillHistory:GetDB().profile.iconPosition][1], f, position[SkillHistory:GetDB().profile.iconPosition][2],1,3)
+					for u= 1,MAX_FRAMES do
+						if(f and f.displayedUnit and UnitIsUnit(skillHistoryFrames[u].unit, f.displayedUnit)) then
+							skillHistoryFrames[u]:SetPoint(position[SkillHistory:GetDB().profile.iconPosition][1], f, position[SkillHistory:GetDB().profile.iconPosition][2],1,3)
+						end
 					end
 				end
 			else 
@@ -893,8 +894,10 @@ function SkillHistory:OnRosterUpdate()
 					for j = 1,5 do
 						local f = _G["CompactRaidGroup"..i.."Member"..j]
 						
-						if(f and f.displayedUnit and UnitIsUnit(skillHistoryFrames[i].unit, f.displayedUnit)) then
-							skillHistoryFrames[i]:SetPoint(position[SkillHistory:GetDB().profile.iconPosition][1], f, position[SkillHistory:GetDB().profile.iconPosition][2],1,3)
+						for u= 1,MAX_FRAMES do
+							if(f and f.displayedUnit and UnitIsUnit(skillHistoryFrames[u].unit, f.displayedUnit)) then
+								skillHistoryFrames[u]:SetPoint(position[SkillHistory:GetDB().profile.iconPosition][1], f, position[SkillHistory:GetDB().profile.iconPosition][2],1,3)
+							end
 						end
 					end
 				end
