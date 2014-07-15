@@ -585,8 +585,8 @@ function SkillHistory:StopCast(skillHistory, ...)
 		icon.casting = nil
 		icon.lineID = nil
 		icon.abandoned = true
-		--icon.castingAnimation:Finish()
-		SkillHistory:ResetIcon(icon)
+		icon.castingAnimation:Finish()
+		--SkillHistory:ResetIcon(icon)
 		skillHistory.stoppedIcon = skillHistory.castingIcon
 		skillHistory.castingIcon = nil
 	end
@@ -904,4 +904,21 @@ function SkillHistory:OnRosterUpdate()
 			end
 		end
 	end
+end
+
+-- Print contents of `tbl`, with indentation.
+-- `indent` sets the initial level of indentation.
+function tprint (tbl, indent)
+  if not indent then indent = 0 end
+  for k, v in pairs(tbl) do
+    formatting = string.rep("  ", indent) .. k .. ": "
+    if type(v) == "table" then
+      print(formatting)
+      tprint(v, indent+1)
+    elseif type(v) == 'boolean' then
+      print(formatting .. tostring(v))      
+    else
+      print(formatting .. v)
+    end
+  end
 end
